@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 # Local
-from src.config import (
+from OLD.config_old import (
     CUT_IN_SPEED,
     CUT_OUT_SPEED,
     RATED_POWER_KW,

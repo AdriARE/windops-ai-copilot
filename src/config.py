@@ -18,9 +18,9 @@ REPORTS_DIR = ROOT_DIR / "reports"
 # TURBINE PARAMETERS
 # ===============================
 RATED_POWER_KW = 3000.0
-CUT_IN_SPEED = 3.0       # m/s
-RATED_WIND_SPEED = 12.0  # m/s
-CUT_OUT_SPEED = 25.0     # m/s
+CUT_IN_SPEED = 3.0
+RATED_WIND_SPEED = 12.0
+CUT_OUT_SPEED = 25.0
 
 # ===============================
 # SIMULATION PARAMETERS
@@ -31,21 +31,80 @@ RAW_FREQ_MINUTES = 10
 AGGREGATION_FREQ = "1h"
 
 # ===============================
-# FAULT SIMULATION
+# FAULT TYPES
 # ===============================
-FAULT_TYPES = ["gearbox_degradation", "pitch_malfunction", "sensor_drift"]
-DEFAULT_FAULT_FRACTION = 0.25   # share of turbines affected in red scenario
-DEFAULT_FAULT_SEVERITY = 0.6    # 0.0 (none) to 1.0 (max)
+FAULT_TYPES = [
+    "gearbox_degradation",
+    "pitch_malfunction",
+    "sensor_drift",
+    "yaw_misalignment",
+]
+
+# ===============================
+# DEMO SCENARIOS
+# ===============================
+# Each scenario defines an explicit fault plan:
+# { turbine_id: (fault_type, severity) }
+# severity: 0.0 (minimal) to 1.0 (maximum degradation)
+# Empty faults dict means a fully healthy fleet.
+
+SCENARIOS = {
+    "green": {
+        "description": "Fully healthy fleet. Baseline operating condition.",
+        "faults": {},
+    },
+    "gearbox": {
+        "description": "Single turbine with advanced gearbox degradation.",
+        "faults": {
+            "WTG-02": ("gearbox_degradation", 0.9),
+        },
+    },
+    "pitch": {
+        "description": "Two turbines with pitch malfunction at different severities.",
+        "faults": {
+            "WTG-05": ("pitch_malfunction", 0.8),
+            "WTG-11": ("pitch_malfunction", 0.6),
+        },
+    },
+    "yaw": {
+        "description": "Two turbines with yaw misalignment.",
+        "faults": {
+            "WTG-03": ("yaw_misalignment", 0.7),
+            "WTG-15": ("yaw_misalignment", 0.6),
+        },
+    },
+    "mixed": {
+        "description": "Three turbines with different fault types — realistic mixed scenario.",
+        "faults": {
+            "WTG-02": ("gearbox_degradation", 0.9),
+            "WTG-07": ("pitch_malfunction", 0.7),
+            "WTG-14": ("sensor_drift", 0.6),
+        },
+    },
+    "red": {
+        "description": "Severe degradation across multiple turbines — stress test scenario.",
+        "faults": {
+            "WTG-01": ("gearbox_degradation", 0.9),
+            "WTG-03": ("yaw_misalignment", 0.8),
+            "WTG-06": ("pitch_malfunction", 0.9),
+            "WTG-09": ("sensor_drift", 0.7),
+            "WTG-12": ("gearbox_degradation", 0.8),
+            "WTG-15": ("pitch_malfunction", 0.7),
+            "WTG-17": ("yaw_misalignment", 0.9),
+            "WTG-19": ("sensor_drift", 0.8),
+        },
+    },
+}
+
+DEFAULT_SCENARIO = "green"
 
 # ===============================
 # RISK SCORE WEIGHTS
 # ===============================
-# Subscore family weights
 W_AERODYNAMIC = 0.50
 W_MECHANICAL = 0.30
 W_ANOMALY = 0.20
 
-# Hybrid scoring: absolute vs relative component
 W_ABSOLUTE = 0.70
 W_RELATIVE = 0.30
 
@@ -65,38 +124,21 @@ ISOLATION_FOREST_RANDOM_STATE = 42
 # ===============================
 # FEATURE ENGINEERING
 # ===============================
-ROLLING_WINDOW_24H = 24   # hours — main rolling window
-ROLLING_WINDOW_72H = 72   # hours — for percentile-based features if needed
-
-# ===============================
-# DEMO SCENARIOS
-# ===============================
-SCENARIOS = {
-    "green": {
-        "fault_fraction": 0.05,
-        "fault_severity": 0.2,
-        "description": "Fleet mostly healthy, few minor anomalies.",
-    },
-    "red": {
-        "fault_fraction": 0.40,
-        "fault_severity": 0.8,
-        "description": "Multiple critical turbines, high energy loss.",
-    },
-}
-DEFAULT_SCENARIO = "green"
+ROLLING_WINDOW_24H = 24
+ROLLING_WINDOW_72H = 72
 
 # ===============================
 # DATA SOURCE FLAG
 # ===============================
-USE_REAL_DATA_IF_AVAILABLE = False  # set True when real SCADA data is available
+USE_REAL_DATA_IF_AVAILABLE = False
 
 # ===============================
 # AGENT
 # ===============================
-AGENT_MODEL = "claude-3-5-sonnet-20241022"
+AGENT_MODEL = "claude-sonnet-4-6"
 ACTION_PLAN_URGENCY_LEVELS = ["low", "medium", "high"]
 
 # ===============================
 # REPORTING
 # ===============================
-ENERGY_PRICE_EUR_MWH = 50.0   # indicative price for loss estimation
+ENERGY_PRICE_EUR_MWH = 50.0

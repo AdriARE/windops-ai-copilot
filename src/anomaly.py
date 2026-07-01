@@ -13,7 +13,7 @@ import pandas as pd
 from sklearn.ensemble import IsolationForest
 
 # Local
-from src.config import (
+from OLD.config_old import (
     ISOLATION_FOREST_CONTAMINATION,
     ISOLATION_FOREST_RANDOM_STATE,
     ROLLING_WINDOW_24H,

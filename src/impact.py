@@ -11,7 +11,7 @@ import logging
 import pandas as pd 
 
 # Local
-from src.config import ENERGY_PRICE_EUR_MWH
+from OLD.config_old import ENERGY_PRICE_EUR_MWH
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def estimate_energy_loss(df: pd.DataFrame) -> pd.DataFrame:
     Loss is only counted when the turbine was avaliable.
     """
 
-    required = {"power_gap_kw", "avaliability"}
+    required = {"power_gap_kw", "availability"}
     missing = required - set(df.columns)
 
     if missing:

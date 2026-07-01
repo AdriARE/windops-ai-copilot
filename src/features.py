@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 # Local
-from src.config import ROLLING_WINDOW_24H
+from OLD.config_old import ROLLING_WINDOW_24H
 
 logger = logging.getLogger(__name__)
 

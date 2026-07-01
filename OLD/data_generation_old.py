@@ -13,10 +13,11 @@ import numpy as np
 import pandas as pd
 
 # Local
-from src.config import (
+from OLD.config_old import (
     AGGREGATION_FREQ,
     CUT_IN_SPEED,
     CUT_OUT_SPEED,
+    FAULT_TYPES,
     N_TURBINES,
     RATED_WIND_SPEED,
     RAW_FREQ_MINUTES,
@@ -39,11 +40,13 @@ def _simulate_wind_speed(
     std: float = 3.5,
 ) -> np.ndarray:
     """
-    Simulate wind speed as a mean-reverting AR(1) process, clipped to [0, cut-out].
+    Simulate wind speed as a mean-reverting AR(1) random walk, clipped to [0, cut-out].
+
+    Uses autocorrelation to produce physically plausible wind series.
     """
     ws = np.empty(n_steps)
     ws[0] = mean
-    phi = 0.92
+    phi = 0.92  # AR(1) persistence coefficient
 
     for t in range(1, n_steps):
         ws[t] = phi * ws[t - 1] + (1 - phi) * mean + rng.normal(0, std * (1 - phi**2) ** 0.5)
@@ -58,51 +61,32 @@ def _simulate_wind_speed(
 def _apply_fault(
     power: np.ndarray,
     wind_speed: np.ndarray,
-    nacelle_temp: np.ndarray,
-    gear_oil_temp: np.ndarray,
     fault_type: str,
     severity: float,
     rng: np.random.Generator,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> np.ndarray:
     """
-    Apply a fault to power and sensor signals.
+    Reduce power output to simulate a specific fault type.
 
-    Each fault type affects different variables to reflect real failure physics:
-    - gearbox_degradation: power loss + elevated temperatures
-    - pitch_malfunction:   power loss at high wind only
-    - sensor_drift:        measurement noise, no real power loss
-    - yaw_misalignment:    power loss proportional to wind speed, no thermal effect
-
-    Returns modified (power, nacelle_temp, gear_oil_temp).
+    severity: 0.0 (no effect) to 1.0 (maximum degradation).
+    Returns modified power array.
     """
     power = power.copy()
-    nacelle_temp = nacelle_temp.copy()
-    gear_oil_temp = gear_oil_temp.copy()
 
     if fault_type == "gearbox_degradation":
         loss_factor = 1.0 - (0.15 + 0.25 * severity)
         power *= loss_factor
-        gear_oil_temp += 8.0 * severity
-        nacelle_temp += 3.0 * severity
 
     elif fault_type == "pitch_malfunction":
-        high_wind = wind_speed >= RATED_WIND_SPEED
+        high_wind_mask = wind_speed >= RATED_WIND_SPEED
         loss_factor = 1.0 - (0.20 + 0.30 * severity)
-        power[high_wind] *= loss_factor
+        power[high_wind_mask] *= loss_factor
 
     elif fault_type == "sensor_drift":
         noise_std = 50.0 + 200.0 * severity
         power += rng.normal(0, noise_std, size=len(power))
 
-    elif fault_type == "yaw_misalignment":
-        # Power loss scales with wind speed: most visible at high winds
-        # cos³(yaw_angle) approximation — yaw angle grows with severity
-        yaw_angle_rad = severity * 0.35  # max ~20 degrees
-        loss_factor = np.cos(yaw_angle_rad) ** 3
-        operating = wind_speed >= CUT_IN_SPEED
-        power[operating] *= loss_factor
-
-    return np.clip(power, 0.0, None), nacelle_temp, gear_oil_temp
+    return np.clip(power, 0.0, None)
 
 
 # ===============================
@@ -118,19 +102,17 @@ def _simulate_turbine(
 ) -> pd.DataFrame:
     """
     Simulate raw 10-minute SCADA-like data for a single turbine.
+
+    Returns a DataFrame with columns:
+    timestamp, turbine_id, wind_speed, power_kw, rotor_rpm,
+    nacelle_temp_c, gear_oil_temp_c, availability.
     """
     n = len(timestamps)
     ws = _simulate_wind_speed(n, rng)
+
     power = expected_power(ws).copy()
-
-    nacelle_temp = 35.0 + 0.4 * power / 1000.0 + rng.normal(0, 1.5, n)
-    gear_oil_temp = 55.0 + 0.3 * power / 1000.0 + rng.normal(0, 2.0, n)
-
     if fault_type is not None:
-        power, nacelle_temp, gear_oil_temp = _apply_fault(
-            power, ws, nacelle_temp, gear_oil_temp,
-            fault_type, fault_severity, rng,
-        )
+        power = _apply_fault(power, ws, fault_type, fault_severity, rng)
 
     power += rng.normal(0, 15.0, size=n)
     power = np.clip(power, 0.0, None)
@@ -139,7 +121,13 @@ def _simulate_turbine(
         ws < CUT_IN_SPEED, 0.0,
         np.clip(5.0 + 1.2 * ws + rng.normal(0, 0.5, n), 0.0, 20.0),
     )
+    nacelle_temp = 35.0 + 0.4 * power / 1000.0 + rng.normal(0, 1.5, n)
+    gear_oil_temp = 55.0 + 0.3 * power / 1000.0 + rng.normal(0, 2.0, n)
 
+    if fault_type == "gearbox_degradation":
+        gear_oil_temp += 8.0 * fault_severity
+
+    # Availability: continuous downtime blocks, more realistic than random per-interval
     availability = np.ones(n)
     n_events = rng.integers(1, 4)
     for _ in range(n_events):
@@ -164,16 +152,17 @@ def _simulate_turbine(
 # ===============================
 
 def simulate_fleet(
-    fault_plan: dict,
     n_turbines: int = N_TURBINES,
     sim_days: int = SIM_DAYS,
+    fault_fraction: float = 0.25,
+    fault_severity: float = 0.6,
     random_seed: int = 42,
 ) -> pd.DataFrame:
     """
     Simulate raw 10-minute SCADA-like data for a full wind farm fleet.
 
-    fault_plan: dict mapping turbine_id → (fault_type, severity).
-    Turbines not in fault_plan are simulated as healthy.
+    Assigns faults randomly to a fraction of turbines.
+    Returns a single long-format DataFrame with all turbines combined.
     """
     rng = np.random.default_rng(random_seed)
 
@@ -181,14 +170,18 @@ def simulate_fleet(
     periods = sim_days * 24 * steps_per_hour
     timestamps = pd.date_range("2024-01-01", periods=periods, freq=f"{RAW_FREQ_MINUTES}min")
 
+    n_faulty = max(1, int(n_turbines * fault_fraction))
+    faulty_ids = set(rng.choice(n_turbines, size=n_faulty, replace=False))
+
     frames = []
     for i in range(n_turbines):
         turbine_id = f"WTG-{i + 1:02d}"
-
-        if turbine_id in fault_plan:
-            fault_type, severity = fault_plan[turbine_id]
+        if i in faulty_ids:
+            fault_type = str(rng.choice(FAULT_TYPES))
+            severity = fault_severity
         else:
-            fault_type, severity = None, 0.0
+            fault_type = None
+            severity = 0.0
 
         df_turbine = _simulate_turbine(turbine_id, timestamps, rng, fault_type, severity)
         df_turbine["fault_type"] = fault_type if fault_type else "none"
@@ -198,7 +191,6 @@ def simulate_fleet(
     raw = pd.concat(frames, ignore_index=True)
     raw = raw.sort_values(["turbine_id", "timestamp"]).reset_index(drop=True)
 
-    n_faulty = len(fault_plan)
     logger.info(
         "Fleet simulation complete | turbines=%d | rows=%d | faulty=%d",
         n_turbines, len(raw), n_faulty,
@@ -213,6 +205,9 @@ def simulate_fleet(
 def aggregate_to_hourly(df_raw: pd.DataFrame) -> pd.DataFrame:
     """
     Aggregate raw 10-minute data to hourly frequency.
+
+    Power and sensor columns are averaged. Availability is the fraction of
+    available intervals within each hour.
     """
     df = df_raw.copy()
     df["timestamp"] = pd.to_datetime(df["timestamp"])
@@ -248,19 +243,20 @@ def aggregate_to_hourly(df_raw: pd.DataFrame) -> pd.DataFrame:
 
 def load_demo_scenario(scenario: str = DEFAULT_SCENARIO) -> pd.DataFrame:
     """
-    Generate a fleet dataset for a named demo scenario.
+    Generate a fleet dataset for a named demo scenario (e.g. 'green', 'red').
 
-    Scenario definitions are in config.SCENARIOS.
+    Scenario parameters are defined in config.SCENARIOS.
     """
     if scenario not in SCENARIOS:
-        raise ValueError(
-            f"Unknown scenario '{scenario}'. Available: {sorted(SCENARIOS.keys())}"
-        )
+        raise ValueError(f"Unknown scenario '{scenario}'. Available: {list(SCENARIOS.keys())}")
 
     params = SCENARIOS[scenario]
     logger.info("Loading scenario '%s': %s", scenario, params["description"])
 
-    raw = simulate_fleet(fault_plan=params["faults"])
+    raw = simulate_fleet(
+        fault_fraction=params["fault_fraction"],
+        fault_severity=params["fault_severity"],
+    )
     return aggregate_to_hourly(raw)
 
 
@@ -269,9 +265,9 @@ def load_demo_scenario(scenario: str = DEFAULT_SCENARIO) -> pd.DataFrame:
 # ===============================
 
 if __name__ == "__main__":
-    for scenario in ["green", "gearbox", "pitch", "yaw", "mixed", "red"]:
-        print(f"\n--- Scenario: {scenario} ---")
-        df = load_demo_scenario(scenario)
-        faulty = df[df["fault_type"] != "none"]["turbine_id"].unique()
-        print(f"Shape: {df.shape}")
-        print(f"Faulty turbines: {sorted(faulty)}")
+    print("Running demo scenario: green")
+    df = load_demo_scenario("green")
+    print(df.head(10).to_string(index=False))
+    print(f"\nShape: {df.shape}")
+    print(f"\nColumns: {list(df.columns)}")
+    print(f"\nTurbines: {df['turbine_id'].unique()}")

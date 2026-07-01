@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 # Local
-from src.config import (
+from OLD.config_old import (
     ROLLING_WINDOW_24H,
     W_ABSOLUTE,
     W_AERODYNAMIC,
