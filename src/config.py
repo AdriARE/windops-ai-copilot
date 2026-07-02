@@ -96,7 +96,7 @@ SCENARIOS = {
     },
 }
 
-DEFAULT_SCENARIO = "green"
+DEFAULT_SCENARIO = "mixed"
 
 # ===============================
 # RISK SCORE WEIGHTS
