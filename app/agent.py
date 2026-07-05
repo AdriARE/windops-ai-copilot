@@ -1,10 +1,11 @@
-# src/agent.py
+# app/agent.py
 
 # ===============================
 # IMPORTS
 # ===============================
 
 # Standard library
+import os
 import json
 import logging
 from typing import Annotated, TypedDict
@@ -261,6 +262,231 @@ def _build_trace(messages: list) -> list[dict]:
 
     return trace
 
+# ===============================
+# DEMO MODE — RULE-BASED DIAGNOSIS
+# ===============================
+
+def _diagnose_from_subscores(
+    turbine_id: str,
+    aero_risk: float,
+    mech_risk: float,
+    anomaly_risk: float,
+    risk_score: float,
+    gear_oil_temp_c: float,
+    power_gap_pct: float,
+) -> dict:
+    """
+    Rule-based fault diagnosis from subscore pattern.
+    Used in demo mode when no API key is available.
+    Mirrors the diagnostic logic the LLM applies.
+    """
+    if risk_score >= 0.65:
+        urgency = "high"
+    elif risk_score >= 0.35:
+        urgency = "medium"
+    else:
+        urgency = "low"
+
+    scores = {"aerodynamic": aero_risk, "mechanical": mech_risk, "anomaly": anomaly_risk}
+    dominant = max(scores, key=scores.get)
+    high_count = sum(1 for v in scores.values() if v > 0.5)
+
+    if high_count >= 2:
+        return {
+            "turbine_id": turbine_id,
+            "urgency": urgency,
+            "fault_hypothesis": "Combined degradation — multiple subsystems affected",
+            "recommended_action": (
+                "Schedule comprehensive inspection within 48 hours. "
+                "Check mechanical drivetrain, pitch actuators and sensor calibration. "
+                "Consider temporary power curtailment if risk score exceeds 0.8."
+            ),
+            "rationale": (
+                f"Elevated risk across aerodynamic ({aero_risk:.2f}), "
+                f"mechanical ({mech_risk:.2f}) and anomaly ({anomaly_risk:.2f}) subscores "
+                "indicates multi-system degradation requiring full inspection."
+            ),
+        }
+
+    if dominant == "mechanical":
+        return {
+            "turbine_id": turbine_id,
+            "urgency": urgency,
+            "fault_hypothesis": "Gearbox or drivetrain degradation",
+            "recommended_action": (
+                f"Schedule gearbox oil sampling and vibration analysis within 24 hours. "
+                f"Gear oil temperature at {gear_oil_temp_c:.1f}°C — monitor for further rise. "
+                "Replace oil filter and check bearing clearances."
+            ),
+            "rationale": (
+                f"Mechanical subscore ({mech_risk:.2f}) is dominant. "
+                f"Elevated gear oil temperature ({gear_oil_temp_c:.1f}°C) is consistent "
+                "with gearbox degradation or insufficient lubrication."
+            ),
+        }
+
+    if dominant == "aerodynamic":
+        if power_gap_pct > 0.20:
+            return {
+                "turbine_id": turbine_id,
+                "urgency": urgency,
+                "fault_hypothesis": "Pitch malfunction or yaw misalignment",
+                "recommended_action": (
+                    "Inspect pitch actuators and yaw system. "
+                    f"Power gap at {power_gap_pct:.1%} of rated capacity. "
+                    "Check blade pitch angle calibration and yaw encoder alignment."
+                ),
+                "rationale": (
+                    f"Aerodynamic subscore ({aero_risk:.2f}) is dominant with "
+                    f"a significant power gap ({power_gap_pct:.1%}). "
+                    "No thermal anomaly suggests aerodynamic rather than mechanical cause."
+                ),
+            }
+        return {
+            "turbine_id": turbine_id,
+            "urgency": urgency,
+            "fault_hypothesis": "Minor aerodynamic degradation — possible blade contamination",
+            "recommended_action": (
+                "Schedule visual blade inspection on next scheduled maintenance window. "
+                "Monitor power gap trend over next 72 hours before escalating."
+            ),
+            "rationale": (
+                f"Moderate aerodynamic subscore ({aero_risk:.2f}) with "
+                f"contained power gap ({power_gap_pct:.1%}). "
+                "Low mechanical and anomaly scores suggest early-stage aerodynamic issue."
+            ),
+        }
+
+    # dominant == "anomaly"
+    return {
+        "turbine_id": turbine_id,
+        "urgency": urgency,
+        "fault_hypothesis": "Sensor drift or instrumentation fault",
+        "recommended_action": (
+            "Schedule sensor calibration check for power transducer and temperature probes. "
+            "Compare readings against neighbouring turbines. "
+            "If drift confirmed, recalibrate or replace sensors before next maintenance cycle."
+        ),
+        "rationale": (
+            f"Anomaly subscore ({anomaly_risk:.2f}) is dominant with "
+            f"low aerodynamic ({aero_risk:.2f}) and mechanical ({mech_risk:.2f}) scores. "
+            "Pattern consistent with sensor instrumentation issues "
+            "rather than physical degradation."
+        ),
+    }
+
+
+def run_agent_demo(
+    priority_df: pd.DataFrame,
+    df_risk: pd.DataFrame,
+    top_n: int = 3,
+) -> tuple[list[dict], list[dict]]:
+    """
+    Demo mode: generate action plans using rule-based diagnosis without LLM.
+    Produces the same output format as run_agent().
+    Used automatically when ANTHROPIC_API_KEY is not set.
+    """
+    action_plans = []
+    trace = []
+
+    top_turbines = priority_df.head(top_n)
+    top_records = top_turbines[
+        [c for c in ["turbine_id", "priority_rank", "priority_score",
+                      "risk_score_mean", "loss_mwh_total"]
+         if c in top_turbines.columns]
+    ].to_dict(orient="records")
+
+    trace.append({"step": "tool_call", "tool": "get_priority_ranking", "input": {"top_n": top_n}})
+    trace.append({"step": "tool_result", "content": str(top_records)[:500]})
+    trace.append({
+        "step": "ai_message",
+        "content": (
+            f"Priority ranking retrieved. Top {top_n} turbines: "
+            + ", ".join(r["turbine_id"] for r in top_records)
+            + ". Inspecting each turbine in detail."
+        ),
+    })
+
+    for _, row in top_turbines.iterrows():
+        tid = row["turbine_id"]
+        subset = df_risk[df_risk["turbine_id"] == tid]
+        if subset.empty:
+            continue
+        latest = subset.sort_values("timestamp").iloc[-1]
+
+        def safe(key, dec=3):
+            try:
+                return round(float(latest.get(key, 0)), dec)
+            except (TypeError, ValueError):
+                return 0.0
+
+        details = {
+            "turbine_id": tid,
+            "risk_score": safe("risk_score"),
+            "risk_level": str(latest.get("risk_level", "unknown")),
+            "aero_risk": safe("aero_risk"),
+            "mech_risk": safe("mech_risk"),
+            "anomaly_risk": safe("anomaly_risk"),
+            "power_gap_pct": safe("power_gap_pct"),
+            "gear_oil_temp_c": safe("gear_oil_temp_c", 1),
+            "anomaly_score": safe("anomaly_score"),
+            "anomaly_flag": int(latest.get("anomaly_flag", 0)),
+        }
+
+        trace.append({"step": "tool_call", "tool": "get_turbine_details", "input": {"turbine_id": tid}})
+        trace.append({"step": "tool_result", "content": str(details)})
+
+        plan = _diagnose_from_subscores(
+            turbine_id=tid,
+            aero_risk=details["aero_risk"],
+            mech_risk=details["mech_risk"],
+            anomaly_risk=details["anomaly_risk"],
+            risk_score=details["risk_score"],
+            gear_oil_temp_c=details["gear_oil_temp_c"],
+            power_gap_pct=details["power_gap_pct"],
+        )
+
+        trace.append({
+            "step": "ai_message",
+            "content": (
+                f"{tid}: aero={details['aero_risk']:.2f}, mech={details['mech_risk']:.2f}, "
+                f"anomaly={details['anomaly_risk']:.2f} → {plan['fault_hypothesis']} "
+                f"[{plan['urgency']}]. Submitting action plan."
+            ),
+        })
+        trace.append({
+            "step": "tool_call",
+            "tool": "submit_action_plan",
+            "input": {k: plan[k] for k in ["turbine_id", "urgency", "fault_hypothesis",
+                                             "recommended_action", "rationale"]},
+        })
+        trace.append({"step": "tool_result", "content": str({"status": "accepted", "turbine_id": tid})})
+
+        action_plans.append(plan)
+
+    logger.info("Demo agent completed | action_plans=%d | trace_steps=%d",
+                len(action_plans), len(trace))
+    return action_plans, trace
+
+
+def run_agent_auto(
+    priority_df: pd.DataFrame,
+    df_risk: pd.DataFrame,
+    top_n: int = 3,
+) -> tuple[list[dict], list[dict], str]:
+    """
+    Auto-detect mode: use real LLM agent if ANTHROPIC_API_KEY is set,
+    otherwise fall back to demo mode.
+
+    Returns (action_plans, trace, mode) where mode is 'live' or 'demo'.
+    """
+    import os
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    if api_key:
+        action_plans, trace = run_agent(priority_df, df_risk, top_n=top_n)
+        return action_plans, trace, "live"
+    action_plans, trace = run_agent_demo(priority_df, df_risk, top_n=top_n)
+    return action_plans, trace, "demo"
 
 # ===============================
 # MAIN — manual test
