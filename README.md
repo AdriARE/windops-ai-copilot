@@ -297,5 +297,4 @@ If no Anthropic API key is configured, the project automatically switches to Dem
 
 Engineer transitioning into Data Science with professional experience in wind farm installation, commissioning and project management across Spain and Brazil.
 
-- GitHub
-- LinkedIn
+**Links:** [GitHub](https://github.com/AdriARE) • [LinkedIn](https://www.linkedin.com/in/arestevez/)
