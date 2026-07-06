@@ -29,7 +29,7 @@ from src.risk import run_risk_pipeline
 from src.impact import run_impact_pipeline
 from src.prioritization import run_prioritization_pipeline
 from src.expected_power import expected_power
-from app.agent import run_agent_auto
+from agent import run_agent_auto
 
 logging.basicConfig(level=logging.WARNING)
 
