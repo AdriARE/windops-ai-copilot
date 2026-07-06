@@ -1,0 +1,23 @@
+[
+  {
+    "turbine_id": "WTG-02",
+    "urgency": "medium",
+    "fault_hypothesis": "Combined degradation — multiple subsystems affected",
+    "recommended_action": "Schedule comprehensive inspection within 48 hours. Check mechanical drivetrain, pitch actuators and sensor calibration. Consider temporary power curtailment if risk score exceeds 0.8.",
+    "rationale": "Elevated risk across aerodynamic (0.80), mechanical (0.02) and anomaly (1.00) subscores indicates multi-system degradation requiring full inspection."
+  },
+  {
+    "turbine_id": "WTG-07",
+    "urgency": "low",
+    "fault_hypothesis": "Minor aerodynamic degradation — possible blade contamination",
+    "recommended_action": "Schedule visual blade inspection on next scheduled maintenance window. Monitor power gap trend over next 72 hours before escalating.",
+    "rationale": "Moderate aerodynamic subscore (0.23) with contained power gap (0.0%). Low mechanical and anomaly scores suggest early-stage aerodynamic issue."
+  },
+  {
+    "turbine_id": "WTG-14",
+    "urgency": "low",
+    "fault_hypothesis": "Minor aerodynamic degradation — possible blade contamination",
+    "recommended_action": "Schedule visual blade inspection on next scheduled maintenance window. Monitor power gap trend over next 72 hours before escalating.",
+    "rationale": "Moderate aerodynamic subscore (0.22) with contained power gap (0.0%). Low mechanical and anomaly scores suggest early-stage aerodynamic issue."
+  }
+]

@@ -475,18 +475,41 @@ def run_agent_auto(
     top_n: int = 3,
 ) -> tuple[list[dict], list[dict], str]:
     """
-    Auto-detect mode: use real LLM agent if ANTHROPIC_API_KEY is set,
+    Auto-detect mode: use real LLM agent if ANTHROPIC_API_KEY is valid,
     otherwise fall back to demo mode.
+
+    Falls back to demo if:
+    - ANTHROPIC_API_KEY is not set
+    - ANTHROPIC_API_KEY is set but invalid (authentication error)
+    - Any API connectivity error occurs
 
     Returns (action_plans, trace, mode) where mode is 'live' or 'demo'.
     """
     import os
     api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    if api_key:
+
+    if not api_key:
+        logger.info("ANTHROPIC_API_KEY not set — running in demo mode.")
+        action_plans, trace = run_agent_demo(priority_df, df_risk, top_n=top_n)
+        return action_plans, trace, "demo"
+
+    try:
         action_plans, trace = run_agent(priority_df, df_risk, top_n=top_n)
         return action_plans, trace, "live"
-    action_plans, trace = run_agent_demo(priority_df, df_risk, top_n=top_n)
-    return action_plans, trace, "demo"
+
+    except Exception as e:
+        error_msg = str(e).lower()
+        is_auth_error = any(kw in error_msg for kw in [
+            "authentication", "auth", "401", "invalid x-api-key",
+            "api key", "unauthorized", "permission",
+        ])
+        if is_auth_error:
+            logger.warning("API key rejected by Anthropic — falling back to demo mode. Error: %s", e)
+        else:
+            logger.warning("Agent call failed — falling back to demo mode. Error: %s", e)
+
+        action_plans, trace = run_agent_demo(priority_df, df_risk, top_n=top_n)
+        return action_plans, trace, "demo"
 
 # ===============================
 # MAIN — manual test
