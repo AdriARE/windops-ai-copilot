@@ -295,6 +295,6 @@ If no Anthropic API key is configured, the project automatically switches to Dem
 
 **Adrián Rodríguez Estévez**
 
-Engineer transitioning into Data Science with professional experience in wind farm installation, commissioning and project management across Spain and Brazil.
+Engineer transitioning into Data Science with professional experience in wind farm installation, commissioning and project management across Europe and LATAM.
 
 **Links:** [GitHub](https://github.com/AdriARE) • [LinkedIn](https://www.linkedin.com/in/arestevez/)
