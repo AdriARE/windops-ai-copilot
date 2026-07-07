@@ -1,0 +1,22 @@
+# === ENVIRONMENT / SECRETS ===
+.env
+.env.*
+*.key
+
+# === PYTHON ===
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# === JUPYTER ===
+.ipynb_checkpoints/
+
+# === DATA CACHE ===
+data/demo/*.parquet
+data/demo/*.csv
+
+# === OS / EDITOR ===
+.DS_Store
+.vscode/
