@@ -168,25 +168,25 @@ streamlit run app/app.py
 Default execution:
 
 ```bash
-python app/cli.py
+python -m app/cli.py
 ```
 
 Custom scenario:
 
 ```bash
-python app/cli.py --scenario red --top-n 5 --export
+python -m app/cli.py --scenario red --top-n 5 --export
 ```
 
 Pipeline only:
 
 ```bash
-python app/cli.py --scenario green --no-agent
+python -m app/cli.py --scenario green --no-agent
 ```
 
 Help:
 
 ```bash
-python app/cli.py --help
+python -m app/cli.py --help
 ```
 
 ---
