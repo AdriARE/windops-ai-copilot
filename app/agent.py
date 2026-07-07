@@ -54,6 +54,10 @@ Your task:
 
 Be specific. Recommendations must describe actual maintenance actions, not generic advice.
 Reference the specific signals that support your diagnosis.
+
+IMPORTANT: Every submit_action_plan call must include all five fields in a single call —
+turbine_id, urgency, fault_hypothesis, recommended_action, and rationale. Never submit a
+partial call. Prepare the full plan before calling the tool.
 """
 
 
@@ -159,7 +163,7 @@ def build_tools(
 
 def build_graph(tools: list) -> StateGraph:
     """Build the LangGraph ReAct graph with the given tools."""
-    llm = ChatAnthropic(model=AGENT_MODEL).bind_tools(tools)
+    llm = ChatAnthropic(model=AGENT_MODEL, max_tokens=4096).bind_tools(tools)
     tool_node = ToolNode(tools)
 
     def call_model(state: AgentState) -> AgentState:

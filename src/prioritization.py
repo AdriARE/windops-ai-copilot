@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 # Local
-from OLD.config_old import (
+from src.config import (
     W_CRITICALITY,
     W_LOSS,
     W_RISK,

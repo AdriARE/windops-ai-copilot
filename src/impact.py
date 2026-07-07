@@ -1,4 +1,4 @@
-# src/impact.oy
+# src/impact.py
 
 # ===============================
 # IMPORTS
@@ -11,7 +11,7 @@ import logging
 import pandas as pd 
 
 # Local
-from OLD.config_old import ENERGY_PRICE_EUR_MWH
+from src.config import ENERGY_PRICE_EUR_MWH
 
 logger = logging.getLogger(__name__)
 
