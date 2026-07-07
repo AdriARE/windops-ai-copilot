@@ -235,6 +235,24 @@ def run_agent(
 # TRACE BUILDER
 # ===============================
 
+def _extract_text(content) -> str:
+    """Extract plain text from an AIMessage content field.
+
+    Content may be a string or a list of typed blocks (text, tool_use).
+    Only text blocks are extracted.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = [
+            block.get("text", "")
+            for block in content
+            if isinstance(block, dict) and block.get("type") == "text"
+        ]
+        return " ".join(parts).strip()
+    return str(content)
+
+
 def _build_trace(messages: list) -> list[dict]:
     """Extract a structured trace from the final message list."""
     trace = []
@@ -250,11 +268,11 @@ def _build_trace(messages: list) -> list[dict]:
                         "tool": tc.get("name", "unknown"),
                         "input": tc.get("args", {}),
                     })
-            content = getattr(msg, "content", "")
-            if content:
+            text = _extract_text(getattr(msg, "content", ""))
+            if text:
                 trace.append({
                     "step": "ai_message",
-                    "content": str(content)[:500],
+                    "content": text[:500],
                 })
 
         elif msg_type == "ToolMessage":
