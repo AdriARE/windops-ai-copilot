@@ -17,9 +17,11 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.ticker as mticker
 import seaborn as sns
+from dotenv import load_dotenv
 
 # Local — src modules
 sys.path.append(str(Path(__file__).resolve().parents[1]))
+load_dotenv()
 
 from src.config import SCENARIOS
 from src.data_generation import load_demo_scenario
