@@ -32,6 +32,7 @@ from src.impact import run_impact_pipeline
 from src.prioritization import run_prioritization_pipeline
 from src.expected_power import expected_power
 from agent import run_agent_auto
+from src.io import export_pdf_report
 
 logging.basicConfig(level=logging.WARNING)
 
@@ -361,13 +362,11 @@ with tab_turbine:
 with tab_copilot:
     st.header("🤖 Copilot — Agent Decisions")
 
-    # Agent state in session
     if "agent_results" not in st.session_state:
         st.session_state["agent_results"] = None
     if "agent_scenario" not in st.session_state:
         st.session_state["agent_scenario"] = None
 
-    # Reset if scenario changed
     if st.session_state["agent_scenario"] != scenario:
         st.session_state["agent_results"] = None
 
@@ -390,7 +389,7 @@ with tab_copilot:
             }
             st.session_state["agent_scenario"] = scenario
 
-        results = st.session_state["agent_results"]
+        results    = st.session_state["agent_results"]
         plans      = results["plans"]
         trace      = results["trace"]
         mode       = results["mode"]
@@ -405,9 +404,9 @@ with tab_copilot:
 
         # Performance metrics
         m1, m2, m3 = st.columns(3)
-        m1.metric("Execution time",    f"{elapsed:.2f}s")
-        m2.metric("Tool calls",        tool_calls)
-        m3.metric("Action plans",      len(plans))
+        m1.metric("Execution time", f"{elapsed:.2f}s")
+        m2.metric("Tool calls",     tool_calls)
+        m3.metric("Action plans",   len(plans))
 
         st.markdown("---")
 
@@ -429,9 +428,9 @@ with tab_copilot:
                 ):
                     col_l, col_r = st.columns([1, 2])
                     with col_l:
-                        st.markdown(f"**Turbine**")
-                        st.markdown(f"**Urgency**")
-                        st.markdown(f"**Fault hypothesis**")
+                        st.markdown("**Turbine**")
+                        st.markdown("**Urgency**")
+                        st.markdown("**Fault hypothesis**")
                     with col_r:
                         st.markdown(f"`{tid}`")
                         st.markdown(
@@ -442,9 +441,29 @@ with tab_copilot:
                         st.markdown(plan.get("fault_hypothesis", "—"))
 
                     st.markdown("**Recommended action**")
-                    st.info(plan.get("recommended_action", "—"))
-                    st.markdown("**Rationale**")
-                    st.caption(plan.get("rationale", "—"))
+                    import re
+                    raw_action = plan.get("recommended_action", "—")
+                    # Normalize (N) → N.
+                    normalized = re.sub(r'\((\d+)\)', r'\1.', raw_action)
+                    # Split on numbered steps that start with a capital letter
+                    formatted = re.sub(r'\s+([2-9]\d*)\.\s+(?=[A-Z])', r'\n\n\1. ', normalized).strip()
+                    st.markdown(formatted)
+                    
+        st.markdown("---")
+
+        # PDF download
+        if plans:
+            pdf_path = export_pdf_report(
+                action_plans=plans,
+                scenario=st.session_state.get("agent_scenario", "unknown"),
+            )
+            pdf_bytes = pdf_path.read_bytes()
+            st.download_button(
+                label="📄 Download Action Plans (PDF)",
+                data=pdf_bytes,
+                file_name=pdf_path.name,
+                mime="application/pdf",
+            )
 
         st.markdown("---")
 

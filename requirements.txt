@@ -36,3 +36,4 @@ streamlit>=1.35,<2.0
 # UTILITIES
 # ===============================
 python-dotenv>=1.0   # for API key management
+fpdf2>=2.7,<3.0
