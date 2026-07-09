@@ -20,3 +20,4 @@ data/demo/*.csv
 # === OS / EDITOR ===
 .DS_Store
 .vscode/
+reports/

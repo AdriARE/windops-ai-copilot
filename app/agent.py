@@ -55,6 +55,10 @@ Your task:
 Be specific. Recommendations must describe actual maintenance actions, not generic advice.
 Reference the specific signals that support your diagnosis.
 
+FORMAT: recommended_action must be a numbered list of concrete steps, written as
+"1. First step. 2. Second step. 3. Third step." Use 2 to 4 steps. Do not write it as a
+single free-flowing sentence.
+
 IMPORTANT: Every submit_action_plan call must include all five fields in a single call —
 turbine_id, urgency, fault_hypothesis, recommended_action, and rationale. Never submit a
 partial call. Prepare the full plan before calling the tool.
@@ -140,7 +144,8 @@ def build_tools(
             turbine_id: Turbine identifier (e.g. WTG-02).
             urgency: One of low, medium, high.
             fault_hypothesis: Suspected fault type based on subscore analysis.
-            recommended_action: Specific maintenance action to take.
+            recommended_action: Numbered list of concrete steps, e.g.
+                "1. Step one. 2. Step two. 3. Step three."
             rationale: Brief explanation linking data signals to the recommendation.
         """
         plan = {
@@ -319,9 +324,9 @@ def _diagnose_from_subscores(
             "urgency": urgency,
             "fault_hypothesis": "Combined degradation — multiple subsystems affected",
             "recommended_action": (
-                "Schedule comprehensive inspection within 48 hours. "
-                "Check mechanical drivetrain, pitch actuators and sensor calibration. "
-                "Consider temporary power curtailment if risk score exceeds 0.8."
+                "1. Schedule comprehensive inspection within 48 hours. "
+                "2. Check mechanical drivetrain, pitch actuators and sensor calibration. "
+                "3. Consider temporary power curtailment if risk score exceeds 0.8."
             ),
             "rationale": (
                 f"Elevated risk across aerodynamic ({aero_risk:.2f}), "
@@ -336,9 +341,9 @@ def _diagnose_from_subscores(
             "urgency": urgency,
             "fault_hypothesis": "Gearbox or drivetrain degradation",
             "recommended_action": (
-                f"Schedule gearbox oil sampling and vibration analysis within 24 hours. "
-                f"Gear oil temperature at {gear_oil_temp_c:.1f}°C — monitor for further rise. "
-                "Replace oil filter and check bearing clearances."
+                f"1. Schedule gearbox oil sampling and vibration analysis within 24 hours. "
+                f"2. Gear oil temperature at {gear_oil_temp_c:.1f}°C — monitor for further rise. "
+                "3. Replace oil filter and check bearing clearances."
             ),
             "rationale": (
                 f"Mechanical subscore ({mech_risk:.2f}) is dominant. "
@@ -354,9 +359,9 @@ def _diagnose_from_subscores(
                 "urgency": urgency,
                 "fault_hypothesis": "Pitch malfunction or yaw misalignment",
                 "recommended_action": (
-                    "Inspect pitch actuators and yaw system. "
-                    f"Power gap at {power_gap_pct:.1%} of rated capacity. "
-                    "Check blade pitch angle calibration and yaw encoder alignment."
+                    "1. Inspect pitch actuators and yaw system. "
+                    f"2. Power gap at {power_gap_pct:.1%} of rated capacity. "
+                    "3. Check blade pitch angle calibration and yaw encoder alignment."
                 ),
                 "rationale": (
                     f"Aerodynamic subscore ({aero_risk:.2f}) is dominant with "
@@ -369,8 +374,8 @@ def _diagnose_from_subscores(
             "urgency": urgency,
             "fault_hypothesis": "Minor aerodynamic degradation — possible blade contamination",
             "recommended_action": (
-                "Schedule visual blade inspection on next scheduled maintenance window. "
-                "Monitor power gap trend over next 72 hours before escalating."
+                "1. Schedule visual blade inspection on next scheduled maintenance window. "
+                "2. Monitor power gap trend over next 72 hours before escalating."
             ),
             "rationale": (
                 f"Moderate aerodynamic subscore ({aero_risk:.2f}) with "
@@ -385,9 +390,9 @@ def _diagnose_from_subscores(
         "urgency": urgency,
         "fault_hypothesis": "Sensor drift or instrumentation fault",
         "recommended_action": (
-            "Schedule sensor calibration check for power transducer and temperature probes. "
-            "Compare readings against neighbouring turbines. "
-            "If drift confirmed, recalibrate or replace sensors before next maintenance cycle."
+            "1. Schedule sensor calibration check for power transducer and temperature probes. "
+            "2. Compare readings against neighbouring turbines. "
+            "3. If drift confirmed, recalibrate or replace sensors before next maintenance cycle."
         ),
         "rationale": (
             f"Anomaly subscore ({anomaly_risk:.2f}) is dominant with "
@@ -495,12 +500,17 @@ def run_agent_auto(
     priority_df: pd.DataFrame,
     df_risk: pd.DataFrame,
     top_n: int = 3,
+    allow_live: bool = True,
 ) -> tuple[list[dict], list[dict], str]:
     """
     Auto-detect mode: use real LLM agent if ANTHROPIC_API_KEY is valid,
     otherwise fall back to demo mode.
 
+    allow_live: if False, always run demo mode regardless of API key
+    (used to gate token spend behind an explicit unlock in the UI).
+
     Falls back to demo if:
+    - allow_live is False
     - ANTHROPIC_API_KEY is not set
     - ANTHROPIC_API_KEY is set but invalid (authentication error)
     - Any API connectivity error occurs
@@ -508,8 +518,14 @@ def run_agent_auto(
     Returns (action_plans, trace, mode) where mode is 'live' or 'demo'.
     """
     import os
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
 
+    if not allow_live:
+        logger.info("Live mode not unlocked — running in demo mode.")
+        action_plans, trace = run_agent_demo(priority_df, df_risk, top_n=top_n)
+        return action_plans, trace, "demo"
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    
     if not api_key:
         logger.info("ANTHROPIC_API_KEY not set — running in demo mode.")
         action_plans, trace = run_agent_demo(priority_df, df_risk, top_n=top_n)

@@ -183,7 +183,7 @@ def export_pdf_report(
 
         _pdf_section(pdf, "Fault Hypothesis", hypothesis)
         _pdf_section(pdf, "Recommended Action", action)
-        _pdf_section(pdf, "Rationale", rationale)
+        _pdf_section(pdf, "Why", rationale)
 
     pdf.output(str(output_path))
     logger.info("PDF report exported: %s", output_path)
