@@ -1,79 +1,73 @@
 # WindOps AI Copilot
 
-> Predictive maintenance and fleet prioritisation for wind turbine operations powered by heuristic risk scoring and an LLM-based diagnostic agent.
+> Explainable predictive maintenance for wind turbine fleets using hybrid risk scoring, anomaly detection and an LLM-powered maintenance copilot.
 
 ---
 
 # Overview
 
-WindOps AI Copilot is an end-to-end predictive maintenance project that simulates a wind farm SCADA environment, detects anomalies, estimates operational risk and uses an LLM agent to generate explainable maintenance recommendations.
+WindOps AI Copilot is an end-to-end AI application that simulates a wind farm SCADA environment, detects anomalous turbine behaviour, prioritises maintenance actions and generates explainable maintenance recommendations using a LangGraph agent.
 
-Unlike traditional black-box predictive maintenance solutions, every recommendation is fully traceable back to the signals and subscores that generated it.
+The project combines synthetic SCADA generation, anomaly detection, hybrid risk scoring and Generative AI to transform operational data into transparent, evidence-based maintenance decisions.
 
 ---
 
-# The Problem
+# Features
 
-Wind farm operators manage fleets of dozens or hundreds of turbines continuously generating SCADA data:
-
-- Wind speed
-- Power production
-- Rotor speed
-- Temperatures
-- Availability
-- Operational status
-
-The difficult part is not collecting data.
-
-The difficult part is deciding:
-
-- Which turbine should be inspected first?
-- Why?
-- What evidence supports that decision?
-
-WindOps AI Copilot addresses this using:
-
-- Transparent heuristic risk scoring
+- Synthetic SCADA data generation with configurable fault scenarios
+- Feature engineering pipeline for turbine health indicators
 - Isolation Forest anomaly detection
-- Explainable prioritisation
-- LangGraph + Claude diagnostic agent
-- Structured maintenance recommendations
+- Hybrid risk scoring combining engineering thresholds and fleet-relative behaviour
+- Fleet-wide maintenance prioritisation
+- LangGraph maintenance copilot
+- Automatic Demo Mode fallback
+- Password-protected Live Mode
+- Interactive Streamlit dashboard
+- Command Line Interface (CLI)
+- JSON, CSV and PDF report export
 
 ---
 
 # Architecture
 
 ```text
-Raw SCADA data (10 min)
-        │
-        ▼
-Hourly aggregation
-        │
-        ▼
-Feature engineering
-        │
-        ▼
-Isolation Forest
-        │
-        ▼
-Hybrid Risk Score
-        │
-        ▼
-Priority Ranking
-        │
-        ▼
-LangGraph Agent
-        │
-        ▼
-Maintenance Action Plan
+                    Raw SCADA Data
+                          │
+                          ▼
+               Hourly Aggregation
+                          │
+                          ▼
+              Feature Engineering
+                          │
+                          ▼
+           Isolation Forest Detection
+                          │
+                          ▼
+              Hybrid Risk Scoring
+                          │
+                          ▼
+              Fleet Prioritisation
+                          │
+          ┌───────────────┴───────────────┐
+          │                               │
+          ▼                               ▼
+   LangGraph AI Agent              Streamlit Dashboard
+          │                               │
+          └───────────────┬───────────────┘
+                          ▼
+             Maintenance Action Plans
+                          │
+          ┌───────────────┼───────────────┐
+          ▼               ▼               ▼
+        JSON             CSV             PDF
 ```
 
-The final risk score is hybrid:
+The hybrid risk score combines:
 
-- **70% Absolute risk** (engineering thresholds)
-- **30% Relative risk** (fleet-normalised)
+- **70% Absolute Risk**, based on engineering thresholds.
+- **30% Relative Risk**, normalised against the current fleet.
 
-This prevents an unhealthy fleet from masking its own problems.
+This approach prevents degraded fleet-wide conditions from masking individual turbine behaviour.
 
 ---
 
@@ -81,11 +75,11 @@ This prevents an unhealthy fleet from masking its own problems.
 
 ```text
 windops-ai-copilot/
-│
+
 ├── app/
-│   ├── agent.py
-│   ├── app.py
-│   └── cli.py
+│   ├── agent.py                 # LangGraph agent
+│   ├── app.py                   # Streamlit dashboard
+│   └── cli.py                   # Command-line interface
 │
 ├── notebooks/
 │   ├── 01_eda_demo_data.ipynb
@@ -101,7 +95,7 @@ windops-ai-copilot/
 │   ├── expected_power.py
 │   ├── features.py
 │   ├── impact.py
-│   ├── io.py
+│   ├── io.py                    # CSV, Markdown and PDF export
 │   ├── prioritization.py
 │   └── risk.py
 │
@@ -122,14 +116,12 @@ windops-ai-copilot/
 | `mixed` | Multiple simultaneous faults |
 | `red` | Severe fleet degradation |
 
-### Fault signatures
-
-| Fault | Power Gap | Gear Oil Temp | Anomaly Score | Dominant Subscore |
-|--------|-----------|---------------|----------------|-------------------|
-| Gearbox degradation | High | High | Moderate | Mechanical |
-| Pitch malfunction | High | Normal | Low | Aerodynamic |
-| Sensor drift | Variable | Normal | High | Anomaly |
-| Yaw misalignment | High | Normal | Low | Aerodynamic |
+| Fault | Dominant Risk | Typical Behaviour |
+|--------|---------------|-------------------|
+| Gearbox degradation | Mechanical | High power loss with elevated gearbox temperature |
+| Pitch malfunction | Aerodynamic | Reduced production despite normal wind conditions |
+| Yaw misalignment | Aerodynamic | Persistent power gap caused by rotor misalignment |
+| Sensor drift | Anomaly | Abnormal sensor behaviour detected by Isolation Forest |
 
 ---
 
@@ -137,9 +129,9 @@ windops-ai-copilot/
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.10 or newer
 
-Install dependencies:
+Install the project dependencies:
 
 ```bash
 pip install -r requirements.txt
@@ -147,109 +139,179 @@ pip install -r requirements.txt
 
 Create a `.env` file:
 
-```bash
-echo "ANTHROPIC_API_KEY=your_key_here" > .env
+```text
+ANTHROPIC_API_KEY=your_api_key
+LIVE_MODE_PASSWORD=your_password
 ```
 
-If no API key is available, the application automatically switches to **Demo Mode** using rule-based diagnosis.
+Without an Anthropic API key the application runs entirely in **Demo Mode** using the built-in rule-based diagnostic engine.
+
+Even with a valid `ANTHROPIC_API_KEY`, the Streamlit application always starts in **Demo Mode**. Real API calls must be explicitly unlocked from the sidebar using `LIVE_MODE_PASSWORD` to prevent unintended token usage.
 
 ---
 
-# Running the Streamlit App
+# Streamlit Dashboard
+
+Launch the dashboard:
 
 ```bash
 streamlit run app/app.py
 ```
 
+The dashboard provides:
+
+- Fleet overview
+- Turbine inspection
+- AI-generated maintenance recommendations
+- Collapsible **Why** section explaining the rationale behind each action plan
+- Agent execution trace
+- PDF export
+- Demo / Live Mode indicator
+
 ---
 
 # Command Line Interface
 
-Default execution:
+Run the default scenario:
 
 ```bash
-python -m app/cli.py
+python -m app.cli
 ```
 
-Custom scenario:
+Run a different scenario:
 
 ```bash
-python -m app/cli.py --scenario red --top-n 5 --export
+python -m app.cli --scenario red
 ```
 
-Pipeline only:
+Analyse five turbines:
 
 ```bash
-python -m app/cli.py --scenario green --no-agent
+python -m app.cli --top-n 5
 ```
 
-Help:
+Export reports:
 
 ```bash
-python -m app/cli.py --help
+python -m app.cli --scenario mixed --top-n 5 --export
 ```
+
+Run only the analytics pipeline:
+
+```bash
+python -m app.cli --no-agent
+```
+
+Display help:
+
+```bash
+python -m app.cli --help
+```
+
+> **Note**
+>
+> The CLI should be executed as a Python module (`python -m app.cli`) rather than as a script. Running it as a module preserves the package structure and avoids `sys.path` import issues.
 
 ---
 
 # Notebooks
 
-Execute in order:
+The project includes three notebooks documenting the development process.
 
-1. `01_eda_demo_data.ipynb`
-2. `02_features_and_scoring.ipynb`
-3. `03_agent_decisions.ipynb`
+| Notebook | Purpose |
+|-----------|---------|
+| **01** | Exploratory Data Analysis of synthetic SCADA data |
+| **02** | Feature engineering, anomaly detection and hybrid risk scoring |
+| **03** | LangGraph agent workflow and maintenance recommendations |
+
+Run them sequentially for the complete project walkthrough.
 
 ---
 
-# Risk Score
+# Hybrid Risk Score
 
-The global score combines three explainable subscores.
+The final turbine risk score combines three explainable subscores.
 
-| Subscore | Weight | Main Features |
-|----------|--------|---------------|
+| Subscore | Weight | Main Signals |
+|----------|--------|--------------|
 | Aerodynamic | 50% | Power gap, yaw proxy, pitch instability |
 | Mechanical | 30% | Gear oil temperature, vibration trend |
 | Anomaly | 20% | Isolation Forest score, anomaly persistence |
 
-Each subscore is calculated as:
+Each subscore combines engineering thresholds with fleet-relative behaviour:
 
 ```text
-0.70 × Absolute Component
-+
-0.30 × Relative Component
+Risk = 0.70 × Absolute Component
+     + 0.30 × Relative Component
 ```
 
-Priority ranking combines:
+The final maintenance priority combines:
 
-- 50% Risk Score
-- 35% Estimated Energy Loss
-- 15% Asset Criticality
+- **50% Risk Score**
+- **35% Estimated Energy Loss**
+- **15% Asset Criticality**
 
-Weights are configurable in `src/config.py`.
+All weights are configurable in `src/config.py`.
 
 ---
 
 # LangGraph Agent
 
-The agent follows a ReAct workflow using three tools:
+The AI Copilot follows a ReAct workflow implemented with LangGraph.
+
+Available tools:
 
 - `get_priority_ranking`
 - `get_turbine_details`
 - `submit_action_plan`
 
-Example output:
+The application automatically selects the appropriate execution mode:
+
+| Mode | Behaviour |
+|------|-----------|
+| **Live Mode** | Uses Claude through the Anthropic API |
+| **Demo Mode** | Uses the built-in deterministic diagnostic engine |
+
+If the Anthropic API is unavailable or authentication fails, the application automatically falls back to Demo Mode while preserving the same workflow and output format.
+
+Every maintenance recommendation includes its supporting risk subscores, relevant operational signals, tool calls and complete execution trace, allowing engineers to understand how each recommendation was generated.
+
+---
+
+# Example Action Plan
+
+The AI agent generates structured maintenance recommendations in JSON format.
 
 ```json
+
 {
   "turbine_id": "WTG-02",
   "urgency": "high",
-  "fault_hypothesis": "Gearbox degradation",
-  "recommended_action": "Schedule gearbox oil sampling within 24 hours.",
-  "rationale": "Mechanical subscore is dominant with elevated gearbox temperature."
+  "fault_hypothesis": "Gearbox or drivetrain degradation",
+  "recommended_action": "1. Schedule gearbox oil sampling and vibration analysis within 24 hours. 2. Monitor gearbox temperature during the next operating cycle. 3. Inspect the lubrication system and bearings during the next maintenance window.",
+  "rationale": "Mechanical risk is dominant due to elevated gearbox oil temperature and sustained power loss, indicating probable drivetrain degradation."
 }
 ```
 
-If no Anthropic API key is configured, the project automatically switches to Demo Mode while preserving the same output format.
+Recommendations are displayed in the Streamlit dashboard and can also be exported as JSON, CSV and PDF reports.
+
+---
+
+# Demo Mode vs Live Mode
+
+| Feature | Demo Mode | Live Mode |
+|----------|-----------|-----------|
+| Analytics Pipeline | ✅ | ✅ |
+| Risk Scoring | ✅ | ✅ |
+| Priority Ranking | ✅ | ✅ |
+| Dashboard | ✅ | ✅ |
+| PDF Export | ✅ | ✅ |
+| Agent Trace | ✅ | ✅ |
+| Claude API | ❌ | ✅ |
+
+Demo Mode uses the project's deterministic rule-based diagnostic engine.
+
+Live Mode replaces that engine with Claude through the Anthropic API while preserving the same workflow and output structure.
 
 ---
 
@@ -257,37 +319,57 @@ If no Anthropic API key is configured, the project automatically switches to Dem
 
 ## Data
 
-- Synthetic SCADA dataset
-- Single generic 3 MW turbine model
-- Simplified fault simulation
+- SCADA data is synthetically generated.
+- Signal behaviour is physically plausible but does not capture the full complexity of a real wind farm.
+- A single generic 3 MW turbine model is currently simulated.
 
 ## Analytics
 
-- Thresholds are manually defined
-- Isolation Forest is trained and evaluated on the same dataset
-- No historical maintenance records
+- Risk score thresholds are engineering heuristics rather than learned from historical failures.
+- Isolation Forest is trained and evaluated on the same synthetic dataset.
+- Historical maintenance records are not yet incorporated into the prioritisation process.
 
-## Agent
+## AI Agent
 
-- LLM outputs are not formally validated
-- No persistent memory
-- No CMMS integration
-- Recommendations are advisory only
+- Live Mode requires a valid Anthropic API key.
+- Live Mode consumes Anthropic API credits.
+- The Streamlit dashboard always starts in **Demo Mode** and requires `LIVE_MODE_PASSWORD` to unlock Live Mode.
+- **The CLI does not yet enforce this lock.** If a valid Anthropic API key is detected, it automatically runs in Live Mode. Aligning this behaviour with the dashboard is an outstanding task.
+- Recommendations are intended to support engineering decisions, not replace engineering judgement.
+- No integration with CMMS platforms (SAP PM, IBM Maximo, etc.) is currently implemented.
 
 ---
 
 # Tech Stack
 
 | Layer | Technology |
-|--------|------------|
+|---------|------------|
 | Language | Python |
-| Data | Pandas |
+| Data Processing | Pandas, NumPy |
 | Machine Learning | Scikit-learn |
 | Anomaly Detection | Isolation Forest |
-| Agent Framework | LangGraph |
+| AI Framework | LangGraph, LangChain |
 | LLM | Claude (Anthropic) |
-| Frontend | Streamlit |
-| Notebooks | Jupyter |
+| Dashboard | Streamlit |
+| Visualisation | Matplotlib, Seaborn |
+| Reports | JSON, CSV, PDF |
+| Environment | python-dotenv |
+| Development | Jupyter Notebook |
+
+---
+
+# Future Improvements
+
+The next planned milestones for the project are:
+
+- Apply the same `LIVE_MODE_PASSWORD` protection to the CLI.
+- Implement real SCADA ingestion through `src/ingesta.py`.
+- Validate the pipeline using the Kelmarsh Wind Farm dataset.
+- Add automatic fallback to DeepSeek when Anthropic is unavailable.
+- Increase automated test coverage with `pytest`.
+- Persist simulated datasets to avoid regenerating scenarios on every execution.
+- Deploy the application on Streamlit Community Cloud.
+- Record a complete demo video covering the dashboard, analytics pipeline and AI Copilot workflow.
 
 ---
 
@@ -295,6 +377,19 @@ If no Anthropic API key is configured, the project automatically switches to Dem
 
 **Adrián Rodríguez Estévez**
 
-Engineer transitioning into Data Science with professional experience in wind farm installation, commissioning and project management across Europe and LATAM.
+Engineer transitioning into Data Science and AI Engineering, with professional experience in wind farm installation, commissioning and project management across Europe and LATAM.
 
-**Links:** [GitHub](https://github.com/AdriARE) • [LinkedIn](https://www.linkedin.com/in/arestevez/)
+This project combines renewable energy domain expertise with Data Science, Machine Learning and Generative AI to build an explainable predictive maintenance workflow for wind turbine fleets.
+
+**Connect with me**
+
+- GitHub: https://github.com/AdriARE
+- LinkedIn: https://www.linkedin.com/in/arestevez/
+
+---
+
+# License
+
+This project is released for educational and portfolio purposes.
+
+Feel free to explore the code, reproduce the analysis and use the project as inspiration for learning or research.
