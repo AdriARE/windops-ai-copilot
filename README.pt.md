@@ -42,26 +42,26 @@ O projeto combina geração de dados SCADA sintéticos, detecção de anomalias,
               Feature Engineering
                           │
                           ▼
-           Isolation Forest Detection
-                          │
-                          ▼
-              Hybrid Risk Scoring
-                          │
-                          ▼
-              Fleet Prioritisation
-                          │
-          ┌───────────────┴───────────────┐
-          │                               │
-          ▼                               ▼
-   LangGraph AI Agent              Streamlit Dashboard
-          │                               │
-          └───────────────┬───────────────┘
-                          ▼
-             Maintenance Action Plans
-                          │
-          ┌───────────────┼───────────────┐
-          ▼               ▼               ▼
-        JSON             CSV             PDF
+            Isolation Forest Detection
+                         │
+                         ▼
+               Hybrid Risk Scoring
+                         │
+                         ▼
+               Fleet Prioritisation
+                         │
+          ┌────────┴─────────┐
+          │                              │
+          ▼                              ▼
+   LangGraph AI Agent             Streamlit Dashboard
+          │                              │
+          └────────┬─────────┘
+                         ▼
+              Maintenance Action Plans
+                         │
+          ┌────────┼────────┐
+          ▼             ▼              ▼
+        JSON             CSV            PDF
 ```
 
 A avaliação híbrida de risco é composta por:
