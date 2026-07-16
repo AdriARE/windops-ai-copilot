@@ -288,9 +288,9 @@ El agente de IA genera recomendaciones de mantenimiento estructuradas en formato
 {
   "turbine_id": "WTG-02",
   "urgency": "high",
-  "fault_hypothesis": "Degradación de la caja multiplicadora o del tren de potencia",
-  "recommended_action": "1. Programar una toma de muestras del aceite de la caja multiplicadora y un análisis de vibraciones en las próximas 24 horas. 2. Supervisar la temperatura de la caja multiplicadora durante el siguiente ciclo de operación. 3. Inspeccionar el sistema de lubricación y los rodamientos durante la próxima ventana de mantenimiento.",
-  "rationale": "El riesgo mecánico es el predominante debido al aumento de la temperatura del aceite de la caja multiplicadora y a una pérdida sostenida de potencia, lo que apunta a una probable degradación del tren de potencia."
+  "fault_hypothesis": "Gearbox or drivetrain degradation",
+  "recommended_action": "1. Schedule gearbox oil sampling and vibration analysis within 24 hours. 2. Monitor gearbox temperature during the next operating cycle. 3. Inspect the lubrication system and bearings during the next maintenance window.",
+  "rationale": "Mechanical risk is dominant due to elevated gearbox oil temperature and sustained power loss, indicating probable drivetrain degradation."
 }
 ```
 
