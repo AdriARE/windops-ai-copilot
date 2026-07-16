@@ -288,9 +288,9 @@ O agente de IA gera recomendações estruturadas de manutenção em formato JSON
 {
   "turbine_id": "WTG-02",
   "urgency": "high",
-  "fault_hypothesis": "Degradação da caixa multiplicadora ou do trem de potência",
-  "recommended_action": "1. Programar uma coleta de óleo da caixa multiplicadora e uma análise de vibração nas próximas 24 horas. 2. Monitorar a temperatura da caixa multiplicadora durante o próximo ciclo de operação. 3. Inspecionar o sistema de lubrificação e os rolamentos na próxima janela de manutenção.",
-  "rationale": "O risco mecânico é predominante devido ao aumento da temperatura do óleo da caixa multiplicadora e à perda sustentada de potência, indicando uma provável degradação do trem de potência."
+  "fault_hypothesis": "Gearbox or drivetrain degradation",
+  "recommended_action": "1. Schedule gearbox oil sampling and vibration analysis within 24 hours. 2. Monitor gearbox temperature during the next operating cycle. 3. Inspect the lubrication system and bearings during the next maintenance window.",
+  "rationale": "Mechanical risk is dominant due to elevated gearbox oil temperature and sustained power loss, indicating probable drivetrain degradation."
 }
 ```
 
