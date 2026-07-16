@@ -1,3 +1,5 @@
+🇬🇧 [English](README.md) | 🇪🇸 [Español](README.es.md) | 🇧🇷 [Português](README.pt.md)
+
 # WindOps AI Copilot
 
 > Explainable predictive maintenance for wind turbine fleets using hybrid risk scoring, anomaly detection and an LLM-powered maintenance copilot.
