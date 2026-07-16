@@ -47,19 +47,19 @@ The project combines synthetic SCADA generation, anomaly detection, hybrid risk 
                           │
                           ▼
               Fleet Prioritisation
-                          │
-          ┌───────────────┴───────────────┐
-          │                               │
-          ▼                               ▼
+                         │
+          ┌────────┴──────────┐
+          │                                │
+          ▼                                ▼
    LangGraph AI Agent              Streamlit Dashboard
-          │                               │
-          └───────────────┬───────────────┘
-                          ▼
+          │                                │
+          └─────────┬─────────┘
+                           ▼
              Maintenance Action Plans
-                          │
-          ┌───────────────┼───────────────┐
+                           │
+          ┌─────────┼─────────┐
           ▼               ▼               ▼
-        JSON             CSV             PDF
+        JSON             CSV               PDF
 ```
 
 The hybrid risk score combines:
