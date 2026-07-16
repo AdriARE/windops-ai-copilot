@@ -33,35 +33,35 @@ El proyecto combina generación de datos SCADA sintéticos, detección de anomal
 # Arquitectura
 
 ```text
-                    Raw SCADA Data
-                          │
-                          ▼
-               Hourly Aggregation
-                          │
-                          ▼
-              Feature Engineering
-                          │
-                          ▼
-           Isolation Forest Detection
-                          │
-                          ▼
-              Hybrid Risk Scoring
-                          │
-                          ▼
-              Fleet Prioritisation
-                          │
+                               Raw SCADA Data
+                                     │
+                                     ▼
+                             Hourly Aggregation
+                                     │
+                                     ▼
+                            Feature Engineering
+                                     │
+                                     ▼
+                        Isolation Forest Detection
+                                     │
+                                     ▼
+                            Hybrid Risk Scoring
+                                     │
+                                     ▼
+                            Fleet Prioritisation
+                                     │
           ┌───────────────┴───────────────┐
-          │                               │
-          ▼                               ▼
-   LangGraph AI Agent              Streamlit Dashboard
-          │                               │
+          │                                                    │
+          ▼                                                    ▼
+   LangGraph AI Agent                                Streamlit Dashboard
+          │                                                    │
           └───────────────┬───────────────┘
-                          ▼
-             Maintenance Action Plans
-                          │
+                                     ▼
+                         Maintenance Action Plans
+                                     │
           ┌───────────────┼───────────────┐
-          ▼               ▼               ▼
-        JSON             CSV             PDF
+          ▼                         ▼                         ▼
+        JSON                        CSV                        PDF
 ```
 
 La evaluación híbrida del riesgo se compone de:
